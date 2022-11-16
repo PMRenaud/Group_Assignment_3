@@ -13,6 +13,7 @@ newt <- function(theta,func,grad,hess=NULL,...,tol=1e-8,fscale=1,
     }
   count <- 0
   while(min(abs(grad)) > (tol * (abs(f) + fscale)) && count < maxit){
+    f0 <- f
     theta <- theta - chol2inv(hessian) %*% grad
     f <- func(theta)
     grad <- grad(theta)
@@ -22,16 +23,22 @@ newt <- function(theta,func,grad,hess=NULL,...,tol=1e-8,fscale=1,
       hessian<- finite_differencing(f,theta,grad) 
     }
     hessian <- positive_definite(hessian)
+    while(f>=f0){
+      f0 <- f
+      theta <- theta - 0.5*chol2inv(hessian) %*% grad
+      f <- func(theta)
+      grad <- grad(theta)
     count <- count + 1
+  }
   }
 }
 
 finite_differencing <- function(f,theta,grad){
   ## like pg 72 in notes
   dim = length(theta)
-  Hfd <- matrix(0,dim,dim) ## finite diference Hessian
+  Hfd <- matrix(0,dim,dim) ## finite difference Hessian
   for (i in 1:dim) { ## Looping over parameters
-    th1 <- thetanew;
+    th1 <- theta;
     th1[i] <- th1[i] + eps        ## Increase th1[i] by eps 
     grad1 <- grad(th1,...) 
     H[i,] <- (grad1 - ftheta)/eps ## Approximate second derivatives
@@ -65,3 +72,4 @@ positive_definite <- function(A){
     return(A)
   }
 }
+
