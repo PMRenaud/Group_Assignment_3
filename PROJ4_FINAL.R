@@ -21,8 +21,8 @@ finite_differencing <- function(theta,grad,eps,...){
   return(Hfd)
 }
 
-pos_def <- function(A){
-  n <- 1e-6
+pos_def <- function(A, eps){
+  n <- eps
   while(inherits(try(chol(A), silent = TRUE),"matrix") == FALSE){
     A <- A + n * diag(1, dim(A)[1])
     n <- 10 * n
@@ -39,10 +39,14 @@ hessian <- function(theta, grad, eps, hess = NULL, ...){
   
   else{
     ## Update Hessian
+    if(all(is.finite(hess))==FALSE){
+      stop('The hessian contains non finite entries')
+    }
     f2prime <- hess(theta)
+    
   }
   
-  f2prime <- pos_def(f2prime)
+  f2prime <- pos_def(f2prime,eps)
   return(f2prime)
 }
 
@@ -56,14 +60,24 @@ newt <- function(theta,func,grad,hess=NULL,...,tol=1e-8,fscale=1,
   # Initialise count
   counter <- 0
   
+  
+  if(all(is.finite(ftheta))==FALSE){
+    stop('ftheta')
+  }
+  if(all(is.finite(fprime))==FALSE){
+    stop('fprime')
+  }
+  
   while(max(abs(fprime)) > tol*(abs(ftheta)+fscale) && counter < maxit){
-    
+
     
     ## Save most recent value of ftheta
     f0 <- ftheta
     
     
     f2prime <- hessian(theta, grad, eps, hess, ...)
+    
+    
     
     R <- chol(f2prime) # Cholesky Decomposition of hessian
     
@@ -80,6 +94,7 @@ newt <- function(theta,func,grad,hess=NULL,...,tol=1e-8,fscale=1,
     ## Loop for halfing
     while(ftheta >= f0 && half_count < max.half){
       
+      
       # Update theta_new
       theta_new <- theta - backsolve(R, forwardsolve(t(R), fprime))
       
@@ -90,7 +105,16 @@ newt <- function(theta,func,grad,hess=NULL,...,tol=1e-8,fscale=1,
       # update ftheta
       ftheta <- func(theta_new)
       
+      if(half_count==max.half){
+        warning('No longer reducing step')
+      }
+      
     }
+    
+    if(half_count==max.half){
+      warning('No longer reducing step')
+    }
+    
     
     # Calculate fprime
     fprime <- grad(theta_new)
@@ -102,6 +126,10 @@ newt <- function(theta,func,grad,hess=NULL,...,tol=1e-8,fscale=1,
   }
   
   
+  if(count == maxit){
+    warning('Maximum iterations reached without convergence')
+    
+  }
 
   invhess <- chol2inv(chol(hessian(theta_new, grad, eps, hess, ...)))
   
@@ -189,8 +217,7 @@ hd <- function(th){
   h
 }
 
-
-
+eps <- 1e-06
 
 
 
@@ -210,5 +237,9 @@ check_positive_definite <- function(A){
 pos_def(H)
 
 
+H <- hd(theta)
+H[1,1]<- NA
 
-
+rd <- function(th){
+  th[1]*NA + 3*th[1]*NA*th[2]*NA 
+}
