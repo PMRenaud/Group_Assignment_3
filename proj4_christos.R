@@ -77,7 +77,7 @@ newt <- function(theta,func,grad,hess=NULL,...,tol=1e-8,fscale=1,
   count <- 0 # Initialise counter of newton method iterations
   
   # Looping until convergence requirements are met
-  while(min(abs(grad)) > (tol * (abs(f) + fscale)) && count < maxit){
+  while(max(abs(grad)) > (tol * (abs(f) + fscale)) && count < maxit){
     f0 <- f
     theta_new <- theta - chol2inv(hessian) %*% gradient
     f <- func(theta) # Update f and gradient with new values
@@ -119,6 +119,11 @@ finite_differencing <- function(theta,grad){
     grad1 <- grad(th1,...)  ## compute resulting gradient 
     Hfd[i,] <- (grad1 - grad(theta))/eps ## Approximate second derivatives
   }
+  
+  ## Make it symmetric
+  
+  
+  
   return(Hfd)
 }
 
@@ -155,4 +160,29 @@ positive_definite <- function(A){
     return(A)
   }
 }
+
+
+
+
+
+ra <- function(th){
+  2*th[1]^2 + th[2]^2-4 + 6*th[2] - 7*th[1] 
+}
+
+ga <- function(th){
+  c(4*th[1]-7, 2*th[2]+6)
+}
+
+ha <- function(th){
+  h <- matrix(0,2,2)
+  h[1,1] <- 4
+  h[2,2] <- 2
+  h[1,2] <- 0
+  h[2,1] <- 0 
+  h
+}
+
+theta = c(20,-20)
+newt(theta, ra, ga, ha)
+
 
