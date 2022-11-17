@@ -5,9 +5,9 @@
 
 ## The purpose of this practical is to construct an implementation of Newton's 
 ## method for mininizing functions. This is an iterative method that constructs
-## a sequence of values (theta), starting from an initial guess theta(0) that 
+## a sequence of values (theta), starting from an initial guess theta(0) and
 ## converges towards a minimizer. It does so by using second-order Taylor
-## approximations of the objective function f around the constructed sequence 
+## approximations of the objective function (f) around the constructed sequence 
 ## values. The iteration stops when the method determines a value where all 
 ## elements of the gradient vector have an absolute value which is lower than a 
 ## certain limit.
@@ -17,16 +17,16 @@
 ## In order to implement Newton's method, we have constructed a function named
 ## newt, which constructs the desired sequence. We have also created some other
 ## functions which are called by newt. These are finite_differencing, 
-## pos_def and positive_definite respectively.
+## pos_def, hessian respectively.
 
 
 
 finite_differencing <- function(theta,grad,eps,...){
-  ## This function is called when the hessian function is not provided and it
+  ## This function is called when the hessian is not provided as an argument. It
   ## uses finite difference approximation in order to calculate the corresponding
   ## hessian.
   ## It receives as arguments a value for theta, the gradient function 
-  ## correspondind to the function that we want to optimize and eps, which give
+  ## corresponding to the function that we want to optimize and eps which gives
   ## the finite difference intervals we are going to take.
   
   dim = length(theta)
@@ -43,16 +43,16 @@ finite_differencing <- function(theta,grad,eps,...){
 }
 
 
-pos_def <- function(A){
+pos_def <- function(A, eps){
   ## This function accepts as an argument a square matrix A and, if A is not 
-  ## a positive definite matrix, it perturbes it to be so. t perturb it to be so.
+  ## a positive definite matrix, it perturbes it to be so. 
   ## This is accomplished by adding a multiple of the identity matrix to it, 
   ## large enough to force positive definiteness. 
-  l <- 1e-6
+  l <- eps
   while(inherits(try(chol(A), silent = TRUE),"matrix") == FALSE){
     ## Enter the loop while A is not positive definite, i.e. as long as Cholesky
     ## decomposition is not possible.
-    A <- A + l * norm(A)*diag(1, dim(A)[1])
+    A <- A + l * diag(1, dim(A)[1])
     l <- 10 * l
   }
   return(A)
@@ -60,7 +60,8 @@ pos_def <- function(A){
 
 hessian <- function(theta, grad, eps, hess = NULL, ...){
   ## This function computes the hessian matrix for a function whose gradient is 
-  ## given by grad, evaluated at a point theta.
+  ## given by grad, evaluated at a point theta. It also checks to see if the 
+  ## created hessian is positive definite.
   ## It receives as inputs the value theta that the hessian should be evaluated
   ## at, the gradient grad of the function whose hessian matrix we want to 
   ## calculate and the finite difference intervals eps.
@@ -72,6 +73,10 @@ hessian <- function(theta, grad, eps, hess = NULL, ...){
   }
   
   else{
+  
+    if(all(is.finite(hess))==FALSE){
+      stop('The hessian contains non finite entries')
+    }
     ## Since the hessian function is provided, we only need to evaluate it at 
     ## theta.
     f2prime <- hess(theta)
@@ -80,6 +85,7 @@ hessian <- function(theta, grad, eps, hess = NULL, ...){
   f2prime <- pos_def(f2prime) 
   return(f2prime)
 }
+
 newt <- function(theta,func,grad,hess=NULL,...,tol=1e-8,fscale=1,
                  maxit=100,max.half=20,eps=1e-6){
   
@@ -99,7 +105,7 @@ newt <- function(theta,func,grad,hess=NULL,...,tol=1e-8,fscale=1,
   ## max.half, which is the maximum number of times a step should be halved
   ## before concluding that the step has failed to improve the objective 
   ## function and
-  ## eps, which give the finite difference intervals that will be used when the 
+  ## eps, which gives the finite difference intervals that will be used when the 
   ## Hessian function is not provided.
   
   # Calculate ftheta and fprime
