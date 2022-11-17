@@ -2,10 +2,10 @@
 ## Holds for dimension 1
 ## Finiteness stuff?
 ## Warnings and stops
-## Finite Difference
 ## ... arguments
 
 ## Run everything in the debugger before submission
+
 
 finite_differencing <- function(theta,grad,eps,...){
 
@@ -30,6 +30,22 @@ pos_def <- function(A){
   return(A)
 }
 
+
+## calculates hessian
+hessian <- function(theta, grad, eps, hess = NULL, ...){
+  if(is.null(hess)){
+    f2prime <- finite_differencing(theta, grad, eps, ...)
+  }
+  
+  else{
+    ## Update Hessian
+    f2prime <- hess(theta)
+  }
+  
+  f2prime <- pos_def(f2prime)
+  return(f2prime)
+}
+
 newt <- function(theta,func,grad,hess=NULL,...,tol=1e-8,fscale=1,
                  maxit=100,max.half=20,eps=1e-6){
   
@@ -42,14 +58,12 @@ newt <- function(theta,func,grad,hess=NULL,...,tol=1e-8,fscale=1,
   
   while(max(abs(fprime)) > tol*(abs(ftheta)+fscale) && counter < maxit){
     
+    
     ## Save most recent value of ftheta
     f0 <- ftheta
     
-    ## Update Hessian
-    f2prime <- hess(theta)
     
-    # Check for positive definiteness
-    f2prime <- pos_def(f2prime)
+    f2prime <- hessian(theta, grad, eps, hess, ...)
     
     R <- chol(f2prime) # Cholesky Decomposition of hessian
     
@@ -85,9 +99,16 @@ newt <- function(theta,func,grad,hess=NULL,...,tol=1e-8,fscale=1,
     
     counter <- counter+1
     
-    }
+  }
+  
+  
+
+  invhess <- chol2inv(chol(hessian(theta_new, grad, eps, hess, ...)))
+  
+  
+  
   ## Output the list of stuff - Check this
-  output <- list(f = ftheta, theta = theta, iter = counter, g = fprime)
+  output <- list(f = ftheta, theta = theta, iter = counter, g = fprime, Hi = invhess)
   return(output)
 }
 
@@ -187,4 +208,7 @@ check_positive_definite <- function(A){
 
 
 pos_def(H)
+
+
+
 

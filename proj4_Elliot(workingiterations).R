@@ -103,9 +103,10 @@ finite_differencing <- function(f,theta,grad){
     th1 <- theta;
     th1[i] <- th1[i] + eps        ## Increase th1[i] by eps 
     grad1 <- grad(th1,...) 
-    H[i,] <- (grad1 - ftheta)/eps ## Approximate second derivatives, What is ftheta?
-    hessian <- H # Is this symettric, or do we need to do (t(H) * H) / 2?
+    Hfd[i,] <- (grad1 - ftheta)/eps ## Approximate second derivatives, What is ftheta?
+ # Is this symettric, or do we need to do (t(H) * H) / 2?
   }
+  hessian <- Hfd
 }
 
 check_positive_definite <- function(A){

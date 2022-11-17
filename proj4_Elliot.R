@@ -62,7 +62,7 @@ newt <- function(theta,func,grad,hess=NULL,...,tol=1e-8,fscale=1,
   if (!is.null(hess)){ 
     hessian <- hess(theta,...)
   }else{ # Hessian is not entered as argument, use finite differencing.
-    hessian <- finite_differencing(ftheta,theta,grad,...) 
+    hessian <- finite_differencing(theta,grad,eps,...) 
   }
   # Check that Hessian is positive definite by calling check function
   if (!check_positive_definite(hessian)){
@@ -90,13 +90,15 @@ newt <- function(theta,func,grad,hess=NULL,...,tol=1e-8,fscale=1,
     if (!is.null(hess)){
       hessian <- hess(theta_new)
     }else{
-      hessian<- finite_differencing(f,theta_new,grad) 
+      hessian<- finite_differencing(theta_new,grad,eps,...) 
     }
     half_count <- 0 
     # Don't understand this part. Should do the halving part I think.
+    gamma <- 1
+    
     while(ftheta >= f0 && half_count < max.half){
       gamma <- gamma / 2
-      theta_new <- theta - gamma*chol2inv(chol(hessian)) %*% f.prime
+      theta_new <- theta - gamma * chol2inv(chol(hessian)) %*% grad
       ftheta <- func(theta_new)
       half_count <- half_count + 1
       if(half_count == max.half){
@@ -104,7 +106,7 @@ newt <- function(theta,func,grad,hess=NULL,...,tol=1e-8,fscale=1,
       }
     }
     theta <- theta_new
-    count <- count + 1 # Append counter
+    count <- count+1 # Append counter
   }
   
   ## Output the list of... 
@@ -129,8 +131,8 @@ finite_differencing <- function(theta,grad,eps,...){
   ## like pg 72 in notes
   dim = length(theta)
   Hfd <- matrix(0,dim,dim) ## initializing finite difference Hessian
+  th1 <- theta;
   for (i in 1:dim) { ## Looping over parameters
-    th1 <- theta;
     th1[i] <- th1[i] + eps  ## Increase th1[i] by eps 
     grad1 <- grad(th1,...)  ## compute resulting gradient 
     Hfd[i,] <- (grad1 - grad(theta,...))/eps ## Approximate second derivatives
@@ -182,5 +184,7 @@ positive_definite <- function(A){
   }
 }
 theta = c(2,-2)
-newt(theta, rc, gc, hc)
-
+newt(theta, ra, ga, ha)
+eps= 1e-06
+finite_differencing(theta,ga,eps)
+ha(theta)
