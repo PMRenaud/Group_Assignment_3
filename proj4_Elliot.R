@@ -112,18 +112,33 @@ newt <- function(theta,func,grad,hess=NULL,...,tol=1e-8,fscale=1,
   return(output)
 }
 
-finite_differencing <- function(f,theta,grad){
+# finite_differencing <- function(f,theta,grad){
+#   ## like pg 72 in notes
+#   dim <- length(theta)
+#   Hfd <- matrix(0,dim,dim) ## finite difference Hessian
+#   for (i in 1:dim) { ## Looping over parameters
+#     th1 <- theta;
+#     th1[i] <- th1[i] + eps        ## Increase th1[i] by eps 
+#     grad1 <- grad(th1,...) 
+#     H[i,] <- (grad1 - ftheta)/eps ## Approximate second derivatives, What is ftheta?
+#     hessian <- H # Is this symmetric, or do we need to do (t(H) * H) / 2?
+#   }
+# }
+
+finite_differencing <- function(theta,grad,eps,...){
   ## like pg 72 in notes
-  dim <- length(theta)
-  Hfd <- matrix(0,dim,dim) ## finite difference Hessian
+  dim = length(theta)
+  Hfd <- matrix(0,dim,dim) ## initializing finite difference Hessian
   for (i in 1:dim) { ## Looping over parameters
     th1 <- theta;
-    th1[i] <- th1[i] + eps        ## Increase th1[i] by eps 
-    grad1 <- grad(th1,...) 
-    H[i,] <- (grad1 - ftheta)/eps ## Approximate second derivatives, What is ftheta?
-    hessian <- H # Is this symmetric, or do we need to do (t(H) * H) / 2?
+    th1[i] <- th1[i] + eps  ## Increase th1[i] by eps 
+    grad1 <- grad(th1,...)  ## compute resulting gradient 
+    Hfd[i,] <- (grad1 - grad(theta,...))/eps ## Approximate second derivatives
   }
+  Hfd <- (Hfd+t(Hfd))/2
+  return(Hfd)
 }
+
 
 check_positive_definite <- function(A){
   result <- try(chol(A))
@@ -134,16 +149,32 @@ check_positive_definite <- function(A){
     return(FALSE)
   }
 }
-positive_definite <- function(A){ # This function can be tidied up a bit?
+# positive_definite <- function(A){ # This function can be tidied up a bit?
+#   if (check_positive_definite(A)==TRUE){
+#     return(A)
+#   }else{
+#     l < 1e-06
+#     temp < -A
+#     A <- A +l*diag(1,dim(A)[1])
+#     result <- try(chol(A)) # Are these two lines needed? - surely they are the same as check_postive_definite?
+#     sf <- inherits(result,"matrix")
+#     while (check_positive_definite(A)==TRUE){
+#       l=10*l
+#       A <- A +l*diag(1,dim(A)[1])
+#     }
+#     return(A)
+#   }
+# }
+positive_definite <- function(A){
+  ## This function accepts as an argument a square matrix A and, if A is not 
+  ## a positive definite matrix, it perturbes it to be so. 
   if (check_positive_definite(A)==TRUE){
     return(A)
   }else{
-    l < 1e-06
-    temp < -A
+    l <- 1e-06
+    temp <- A
     A <- A +l*diag(1,dim(A)[1])
-    result <- try(chol(A)) # Are these two lines needed? - surely they are the same as check_postive_definite?
-    sf <- inherits(result,"matrix")
-    while (check_positive_definite(A)==TRUE){
+    while (check_positive_definite(A)==FALSE){
       l=10*l
       A <- A +l*diag(1,dim(A)[1])
     }
