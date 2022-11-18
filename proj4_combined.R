@@ -2,6 +2,9 @@
 ## Github repo: https://github.com/PMRenaud/Group_Assignment_3.git
 ## Christos Giannikos (s2436019), Elliot Leishman (s1808740), 
 ## Patrick Renaud (s2462989)
+## Christos Giannikos: (comments, finite differencing, pos_def, newt)
+## Elloit Leishman: (newt, pos_ef, hessian)
+## Patrick Renaud: (hessian, finite differencing, pos_def)
 
 ## The purpose of this practical is to construct an implementation of Newton's 
 ## method for minimising functions. This is an iterative method that constructs
@@ -66,7 +69,7 @@ pos_def <- function(A,eps){
   ## Check if A is positive definite, by testing if Cholesky decomposition fails
   while(inherits(try(chol(A), silent = TRUE),"matrix") == FALSE){
     ## Add l times the identity to A
-    A <- A + l*diag(1, dim(A)[1])
+    A <- A + l*norm(A,type="F")*diag(1, dim(A)[1])
     
     ## Multiply l by 10 for future iterations
     l <- 10 * l
@@ -195,7 +198,7 @@ newt <- function(theta,func,grad,hess=NULL,...,tol=1e-8,fscale=1,
        
        
        # Update theta_new
-       theta_new <- theta - backsolve(R, forwardsolve(t(R), fprime))
+       theta_new <- theta - stepsize*backsolve(R, forwardsolve(t(R), fprime))
        
        # Update stepsize and half_count
        stepsize <- stepsize/2
@@ -206,11 +209,11 @@ newt <- function(theta,func,grad,hess=NULL,...,tol=1e-8,fscale=1,
        
        }
      
-     #if(half_count==max.half){
+     if(half_count==max.half){
        ## We issue a warning if the method has failed to reduce the objective 
        ## function after trying max.half step halvings
-      # warning('No longer reducing step')
-     #}
+       warning('No longer reducing step')
+     }
      
      # Calculate the gradient at the induced value of theta
      fprime <- grad(theta_new,...)
