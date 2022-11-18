@@ -55,7 +55,7 @@ pos_def <- function(A,eps){
     ## Enter the loop while A is not positive definite, i.e. as long as Cholesky
     ## decomposition is not possible.
     ## A <- A + l * norm(A)*diag(1, dim(A)[1])
-    A <- A + l * diag(1, dim(A)[1])
+    A <- A + l*diag(1, dim(A)[1])
     l <- 10 * l
   }
   return(A)
@@ -76,11 +76,14 @@ hessian <- function(theta, grad, eps, hess = NULL, ...){
   
   else{
     ## Since the hessian function is provided, we only need to evaluate it at 
-    ## theta.
+    ## theta, after checking whether it contains non finite entries.
+    #if(all(is.finite(hess))==FALSE){
+      #stop('The hessian contains non finite entries')
+    #}
     f2prime <- hess(theta)
   }
   ## guarantee that the induced hessian is positive definite
-  f2prime <- pos_def(f2prime) 
+  f2prime <- pos_def(f2prime,eps) 
   return(f2prime)
 }
 newt <- function(theta,func,grad,hess=NULL,...,tol=1e-8,fscale=1,
@@ -119,8 +122,10 @@ newt <- function(theta,func,grad,hess=NULL,...,tol=1e-8,fscale=1,
   ftheta <- func(theta)
   fprime <- grad(theta)
   
-  
-  
+  count <-0              # Initialise count
+   
+  ## We have to stop the method if the objective function or its gradient are 
+  ## not finite at the initial theta.
   if(all(is.finite(ftheta))==FALSE){
     stop('ftheta')
   }
@@ -129,9 +134,9 @@ newt <- function(theta,func,grad,hess=NULL,...,tol=1e-8,fscale=1,
   }
   
   
-  counter <-0              # Initialise count
+ 
   
-  while(max(abs(fprime)) > tol*(abs(ftheta)+fscale) && counter < maxit){
+  while(max(abs(fprime)) > tol*(abs(ftheta)+fscale) && count < maxit){
     ## we keep iterating as long as all elements of the gradient vector have 
     # an absolute value lower than tol times the absolute value of the objective 
     ## function plus fscale.
@@ -142,7 +147,7 @@ newt <- function(theta,func,grad,hess=NULL,...,tol=1e-8,fscale=1,
     ## We form the induced hessian matrix evaluated at the new value for theta. 
     ## By the construction of our hessian function, we know that it will be
     ## positive definite.  
-    f2prime <- hessian(theta, grad, eps, hess,...)
+    f2prime <- hessian(theta, grad, eps, hess, ...)
     
     ## Now we perform a Cholesky decomposition for the hessian and we calculate 
     ## the new proposal for the optimal theta, which is given by the old value 
@@ -170,7 +175,7 @@ newt <- function(theta,func,grad,hess=NULL,...,tol=1e-8,fscale=1,
        theta_new <- theta - backsolve(R, forwardsolve(t(R), fprime))
        
        # Update stepsize and half_count
-       stepsize <- stepsize / 2
+       stepsize <- stepsize/2
        half_count <- half_count+1
        
        # Reevaluate the objective function at the new value of theta
@@ -187,7 +192,7 @@ newt <- function(theta,func,grad,hess=NULL,...,tol=1e-8,fscale=1,
      # Calculate the gradient at the induced value of theta
      fprime <- grad(theta_new)
      theta <- theta_new ## Is this line needed?
-     counter <- counter+1
+     count <- count+1
      
   }
   
@@ -201,7 +206,7 @@ newt <- function(theta,func,grad,hess=NULL,...,tol=1e-8,fscale=1,
   
   
   ## Output our results
-  output <- list(f = ftheta, theta = theta, iter = counter, g = fprime, Hi = invhess)
+  output <- list(f = ftheta, theta = theta, iter = count, g = fprime, Hi = invhess)
   return(output)
 }
 
