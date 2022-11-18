@@ -1,16 +1,16 @@
 ## Statistical Programming, Practical 4
-## Github repo: https://github.com/
+## Github repo: https://github.com/PMRenaud/Group_Assignment_3.git
 ## Christos Giannikos (s2436019), Elliot Leishman (s1808740), 
 ## Patrick Renaud (s2462989)
 
 ## The purpose of this practical is to construct an implementation of Newton's 
-## method for mininizing functions. This is an iterative method that constructs
+## method for minimising functions. This is an iterative method that constructs
 ## a sequence of values (theta), starting from an initial guess theta(0) and 
-## converges towards a minimizer. It does so by using second-order Taylor
+## converges towards a minimum. It does so by using second-order Taylor
 ## approximations of the objective function f around the constructed sequence 
 ## values. The iteration stops when the method determines a value where all 
 ## elements of the gradient vector have an absolute value which is lower than a 
-## certain limit.
+## certain limit, ie when the method converges on the minimum.
 
 
 ## General outline:
@@ -22,44 +22,59 @@
 
 
 finite_differencing <- function(theta,grad,eps,...){
+  
   ## This function is called when the hessian function is not provided as an 
   ## argument. It uses finite difference approximation in order to calculate 
-  ## the corresponding hessian.
+  ## the corresponding hessian from the gradient.
+  
   ## It receives as arguments a value for theta, the gradient function 
   ## corresponding to the function that we want to optimize and eps, which give
   ## the finite difference intervals we are going to take.
   
-  dim = length(theta)
-  Hfd <- matrix(0,dim,dim) ## initializing finite difference Hessian
+  ## Store length of theta
+  dim = length(theta,...)
+  
+  ## initializing finite difference Hessian
+  Hfd <- matrix(0,dim,dim) 
+  
   for (i in 1:dim) {       ## Looping over parameters
     th1 <- theta;
     th1[i] <- th1[i] + eps  ## Increase th1[i] by eps 
     grad1 <- grad(th1,...)  ## compute resulting gradient 
     Hfd[i,] <- (grad1 - grad(theta,...))/eps ## Approximate second derivatives
   }
+  
   ## Ensure that the induced Hessian is symmetric by taking (t(A)+A)/2 
   Hfd <- (Hfd+t(Hfd))/2
+  
   return(Hfd)
 }
 
 
 pos_def <- function(A,eps){
+  
   ## This function accepts as an argument a square matrix A and, if A is not 
-  ## a positive definite matrix, it perturbes it to be so.
+  ## a positive definite matrix, it perturbs it to be so.
   ## This is accomplished by adding a multiple of the identity matrix to it, 
   ## large enough to force positive definiteness. 
   ## Note that if the input matrix A is positive definite, then pos_def simply
   ## returns it. 
+  
+  ## Set scaling to start with eps
   l <- eps
+  
+  ## Check if A is positive definite, by testing if Cholesky decomposition fails
   while(inherits(try(chol(A), silent = TRUE),"matrix") == FALSE){
-    ## Enter the loop while A is not positive definite, i.e. as long as Cholesky
-    ## decomposition is not possible.
-    ## A <- A + l * norm(A)*diag(1, dim(A)[1])
+    ## Add l times the identity to A
     A <- A + l*diag(1, dim(A)[1])
+    
+    ## Multiply l by 10 for future iterations
     l <- 10 * l
   }
+  
   return(A)
 }
+
 
 hessian <- function(theta, grad, eps, hess = NULL, ...){
   ## This function computes the hessian matrix for a function whose gradient is 
@@ -67,25 +82,34 @@ hessian <- function(theta, grad, eps, hess = NULL, ...){
   ## It receives as inputs the value theta that the hessian should be evaluated
   ## at, the gradient grad of the function whose hessian matrix we want to 
   ## calculate and the finite difference intervals eps.
+  ## It checks that first if the hessian is null, in which case it call finite
+  ## differencing to produce a finite difference approximation of the hessian
   
+  ## Check if hess is null
   if(is.null(hess)){
-    ## If in our initial newt function no hessian is provided as input, then we
-    ## perform finite differencing
+    ## If so, do finite differencing.
     f2prime <- finite_differencing(theta, grad, eps, ...)
   }
   
   else{
     ## Since the hessian function is provided, we only need to evaluate it at 
     ## theta, after checking whether it contains non finite entries.
+    
     #if(all(is.finite(hess))==FALSE){
-      #stop('The hessian contains non finite entries')
+     # stop('The hessian contains non finite entries')
     #}
-    f2prime <- hess(theta)
+    
+    f2prime <- hess(theta,...)
+    
   }
-  ## guarantee that the induced hessian is positive definite
-  f2prime <- pos_def(f2prime,eps) 
+  ## Guarantee that the induced hessian is positive definite
+  f2prime <- pos_def(f2prime,eps)
+  
+  
   return(f2prime)
 }
+
+
 newt <- function(theta,func,grad,hess=NULL,...,tol=1e-8,fscale=1,
                  maxit=100,max.half=20,eps=1e-6){
   
@@ -97,6 +121,7 @@ newt <- function(theta,func,grad,hess=NULL,...,tol=1e-8,fscale=1,
   ## hess, which is the Hessian matrix function for func. If not supplied then 
   ## newt obtains an approximation to the Hessian by calling the 
   ## finite_differencing function we have defined below,
+  ## ..., argument to provide any other arguments of func, grad and hess
   ## tol, which is the convergence tolerance,
   ## fscale, which provides a rough estimate of the magnitude of func near the 
   ## optimum,
@@ -119,8 +144,8 @@ newt <- function(theta,func,grad,hess=NULL,...,tol=1e-8,fscale=1,
   
   # Calculate the value of the function func at theta and its gradient, denoted 
   # fprime at the same point 
-  ftheta <- func(theta)
-  fprime <- grad(theta)
+  ftheta <- func(theta, ...)
+  fprime <- grad(theta,...)
   
   count <-0              # Initialise count
    
@@ -132,8 +157,6 @@ newt <- function(theta,func,grad,hess=NULL,...,tol=1e-8,fscale=1,
   if(all(is.finite(fprime))==FALSE){
     stop('fprime')
   }
-  
-  
  
   
   while(max(abs(fprime)) > tol*(abs(ftheta)+fscale) && count < maxit){
@@ -155,7 +178,7 @@ newt <- function(theta,func,grad,hess=NULL,...,tol=1e-8,fscale=1,
     
     R <- chol(f2prime) # Cholesky Decomposition of hessian
     theta_new <- theta - backsolve(R, forwardsolve(t(R), fprime))# Update theta
-    ftheta <- func(theta_new) # Evaluate f at the new value for theta, theta_new
+    ftheta <- func(theta_new,...) # Evaluate f at the new value for theta, theta_new
     
     
      ## To avoid any possibility of divergence, we have to check whether each new 
@@ -178,31 +201,48 @@ newt <- function(theta,func,grad,hess=NULL,...,tol=1e-8,fscale=1,
        stepsize <- stepsize/2
        half_count <- half_count+1
        
-       # Reevaluate the objective function at the new value of theta
-       ftheta <- func(theta_new)
+       # Re-evaluate the objective function at the new value of theta
+       ftheta <- func(theta_new,...)
        
        }
      
-     if(half_count==max.half){
+     #if(half_count==max.half){
        ## We issue a warning if the method has failed to reduce the objective 
-       ## function after  trying max.half step halvings
-       warning('No longer reducing step')
-     }
+       ## function after trying max.half step halvings
+      # warning('No longer reducing step')
+     #}
      
      # Calculate the gradient at the induced value of theta
-     fprime <- grad(theta_new)
-     theta <- theta_new ## Is this line needed?
+     fprime <- grad(theta_new,...)
+     theta <- theta_new
      count <- count+1
      
   }
   
   if(count == maxit){
-    warning('Maximum iterations reached without convergence')
-    
+    warning('Maximum iterations reached without convergence.')
   }
+  
+  
+  
   ## We calculate the inverse of the hessian matrix at the point of convergence
   invhess <- chol2inv(chol(hessian(theta_new, grad, eps, hess, ...)))
   
+  
+  ## Computing inverse hessian at convergence and testing that the hessian is
+  ## indeed positive definite.
+  
+  if(is.null(hess)){
+    f2prime <- finite_differencing(theta, grad, eps, ...)
+  }else{
+    f2prime <- hess(theta,...)
+  }
+  
+  if(inherits(try(chol(f2prime), silent = TRUE),"matrix") == FALSE){
+    stop('Hessian is not positive definite at convergence')
+  }else{
+    invhess <- chol2inv(chol(f2prime))
+  }
   
   
   ## Output our results
@@ -211,5 +251,76 @@ newt <- function(theta,func,grad,hess=NULL,...,tol=1e-8,fscale=1,
 }
 
 
-   
+# Test cases -------------------------------------------------------------------
+rb <- function(th,k=2){
+  k*(th[2]-th[1]^2)^2 + (1-th[1])^2
+} 
+
+gb <- function(th,k=2){
+  c(-2*(1-th[1])-k*4*th[1]*(th[2]-th[1]^2),k*2*(th[2]-th[1]^2))
+}
+
+hb <- function(th,k=2) {
+  h <- matrix(0,2,2)
+  h[1,1] <- 2-k*2*(2*(th[2]-th[1]^2) - 4*th[1]^2)
+  h[2,2] <- 2*k
+  h[1,2] <- h[2,1] <- -4*k*th[1]
+  h
+}
+
+theta = c(100,100)
+newt(theta, rb, gb, hb)
+
+rc <- function(th){
+  2*th[1]^2 + th[2]^2 
+}
+
+gc <- function(th){
+  c(4*th[1], 2*th[2])
+}
+
+hc <- function(th){
+  h <- matrix(0,2,2)
+  h[1,1] <- 4
+  h[2,2] <- 2
+  h[1,2] <- 0
+  h[2,1] <- 0 
+  h
+}
+theta = c(12,12)
+newt(theta, rd, gd, hd)
+
+ra <- function(th){
+  2*th[1]^2 + th[2]^2-4 + 6*th[2] - 7*th[1] 
+}
+
+ga <- function(th){
+  c(4*th[1]-7, 2*th[2]+6)
+}
+
+ha <- function(th){
+  h <- matrix(0,2,2)
+  h[1,1] <- 4
+  h[2,2] <- 2
+  h[1,2] <- 0
+  h[2,1] <- 0 
+  h
+}
+
+rd <- function(th){
+  th[1]^4 + 3*th[1]^2*th[2]^2 + 2*th[2]^2 
+}
+
+gd <- function(th){
+  c(4*th[1]^3 + 6*th[1]*th[2]^2, 6*th[1]^2*th[2]+4*th[2])
+}
+
+hd <- function(th){
+  h <- matrix(0,2,2)
+  h[1,1] <- 12*th[1]^2 + 6*th[2]^2
+  h[2,2] <- 6*th[1]^2+4
+  h[1,2] <- 12*th[1]*th[2]
+  h[2,1] <- 12*th[1]*th[2]
+  h
+}
 
